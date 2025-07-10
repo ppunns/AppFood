@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:food_apps/features/auth/presentation/cubit/login_cubit.dart';
 import 'package:food_apps/routes/app_router.dart';
 
 class LoginFormWidget extends StatefulWidget {
@@ -9,63 +11,94 @@ class LoginFormWidget extends StatefulWidget {
 }
 
 class _LoginFormWidgetState extends State<LoginFormWidget> {
+
+
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
   bool _isPasswordVisible = false;
   bool _rememberMe = false;
 
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+  
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF121223),
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 119),
-            const Text(
-              'Log In',
-              style: TextStyle(
-                fontSize: 30,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFFFFFFFF),
+    return BlocConsumer<LoginCubit,LoginState>(
+      listener: (context,state){
+        if(state is LoginFailure){
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.message),
+            backgroundColor: Colors.red,)
+          );
+        }else if( state is LoginSuccess){
+          Navigator.pushNamedAndRemoveUntil(context, AppRouter.home, (route) => false);
+        }
+      }, builder: ( context,  state) {
+        final isLoading = state is LoginLoading;
+
+        return Scaffold(
+        backgroundColor: const Color(0xFF121223),
+        body: SafeArea(
+          child: Column(
+            children: [
+              const SizedBox(height: 119),
+              const Text(
+                'Log In',
+                style: TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFFFFFFF),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Please sign in to your existing account',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
-                color: Color(0xFFFFFFFF),
+              const SizedBox(height: 8),
+              const Text(
+                'Please sign in to your existing account',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFFFFFFFF),
+                ),
               ),
-            ),
-            const SizedBox(height: 30),
-            Expanded(
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: Container(
-                  width: MediaQuery.of(context).size.width,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, -4),
-                      ),
-                    ],
-                  ),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          'Email',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+              const SizedBox(height: 30),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Container(
+                    width: MediaQuery.of(context).size.width,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, -4),
                         ),
-                        const SizedBox(height: 8),
-                        TextField(
+                      ],
+                    ),
+                    child: SingleChildScrollView(
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Email',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
                             decoration: InputDecoration(
                               hintText: 'example@gmail.com',
@@ -77,14 +110,21 @@ class _LoginFormWidgetState extends State<LoginFormWidget> {
                                 borderSide: BorderSide.none,
                               ),
                             ),
+                            validator: (value){
+                              if(value == null|| value.isEmpty){
+                                return "Please enter your email";
+                              }
+                              return null;
+                            },
                           ),
-                        const SizedBox(height: 24),
-                        const Text(
-                          'Password',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
+                          const SizedBox(height: 24),
+                          const Text(
+                            'Password',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _passwordController,
                             obscureText: !_isPasswordVisible,
                             decoration: InputDecoration(
                               hintText: '••••••••••••',
@@ -109,9 +149,15 @@ class _LoginFormWidgetState extends State<LoginFormWidget> {
                                 borderSide: BorderSide.none,
                               ),
                             ),
-                            
+                            validator: (value){
+                              if(value == null || value.isEmpty){
+                                return "Please enter your password";
+                              }
+                              return null;
+                            },
+
                           ),
-                        const SizedBox(height: 24),
+                          const SizedBox(height: 24),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -156,19 +202,30 @@ class _LoginFormWidgetState extends State<LoginFormWidget> {
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: () {},
+                              onPressed: isLoading ? null : () {
+                                if(_formKey.currentState!.validate()){
+                                  context.read<LoginCubit>().login(_emailController.text, _passwordController.text);
+                                }
+                              },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.orange,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                elevation: 5,
-                                shadowColor: Colors.orange.withOpacity(0.4)
+                                  backgroundColor: Colors.orange,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 5,
+                                  shadowColor: Colors.orange.withOpacity(0.4)
                               ),
-                              child: const Text(
-                                'LOG IN',
-                                style: TextStyle(
+                              child: isLoading ?
+                                  const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 3,
+                                    ),
+                                  )
+                                  : const Text( 'LOG IN', style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
@@ -176,7 +233,7 @@ class _LoginFormWidgetState extends State<LoginFormWidget> {
                               ),
                             ),
                           ),
-                        const SizedBox(height: 24),
+                          const SizedBox(height: 24),
                           // Sign up link
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -196,8 +253,8 @@ class _LoginFormWidgetState extends State<LoginFormWidget> {
                               ),
                             ],
                           ),
-                        const SizedBox(height: 24),
-                        // "Or" divider
+                          const SizedBox(height: 24),
+                          // "Or" divider
                           const Row(
                             children: [
                               Expanded(child: Divider()),
@@ -208,36 +265,39 @@ class _LoginFormWidgetState extends State<LoginFormWidget> {
                               Expanded(child: Divider()),
                             ],
                           ),
-                        const SizedBox(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _buildSocialButton(
-                              icon: Icons.facebook,
-                              color: const Color(0xFF4267B2),
-                              onPressed: () {},
-                            ),
-                            _buildSocialButton(
-                              icon: Icons.flutter_dash,
-                              color: const Color(0xFF1DA1F2),
-                              onPressed: () {},
-                            ),
-                            _buildSocialButton(
-                              icon: Icons.apple,
-                              color: Colors.black,
-                              onPressed: () {},
-                            ),
-                          ],
-                        ),
-                      ],
+                          const SizedBox(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _buildSocialButton(
+                                icon: Icons.facebook,
+                                color: const Color(0xFF4267B2),
+                                onPressed: () {},
+                              ),
+                              _buildSocialButton(
+                                icon: Icons.flutter_dash,
+                                color: const Color(0xFF1DA1F2),
+                                onPressed: () {},
+                              ),
+                              _buildSocialButton(
+                                icon: Icons.apple,
+                                color: Colors.black,
+                                onPressed: () {},
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      )
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
+      );
+      },
     );
   }
 
